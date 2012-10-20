@@ -1,9 +1,10 @@
 /**
- * @file   vitdec.cc
- * @author bdsatish
- * @date   Oct 20, 2012
+ * @file       vitdec.cc
+ * @author     bdsatish
+ * @date       Oct 20, 2012
+ * @copyright  Copyright (C) 2012, Satish BD, see LICENSE file for details
  * 
- * @brief  Implementation file for the Viterbi decoder
+ * @brief      Implementation file for the Viterbi decoder
  * 
  */
 

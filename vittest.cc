@@ -1,10 +1,10 @@
 /**
- * @file   vittest.cc
- * @author bdsatish
- * @date   Oct 20, 2012
+ * @file       vittest.cc
+ * @author     bdsatish
+ * @date       Oct 20, 2012
+ * @copyright  Copyright (C) 2012, Satish BD, see LICENSE file for details
  * 
- * @brief  Test driver for Viterbi decoder
- * 
+ * @brief      Test driver for Viterbi decoder
  */
 
 #include "vitdec.hh"
