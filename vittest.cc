@@ -10,31 +10,21 @@
 #include "vitdec.hh"
 #include <cstdlib>
 #include <cassert>
+#include <iostream>
 using namespace std;
 
 Stage* init_stage(unsigned outBits);
 void delete_stage(Stage* stage);
 Trellis* getTrellis();
 void test_trellis(Trellis* trellis);
+void test_small_sample(Trellis* trellis);
 
 int main()
 {
-  DataType outBits[] = {0b01, 0b01};
-  Stage* nextStage = init_stage(outBits[0]);
   Trellis* trellis = getTrellis();
   trellis->build();
 
-  test_trellis(trellis);
-
-  const int tracebackLen = 7;
-
-  for (int i = 0; i < tracebackLen; i++)
-  {
-    Stage* stage = nextStage;
-    nextStage = updateSurvivors(stage, outBits[i], trellis->branchPairs());
-  }
-
-  delete_stage(nextStage);
+  test_small_sample(trellis);
   delete trellis;
 
   return 0;
@@ -92,11 +82,38 @@ Trellis* getTrellis()
   return trellis;
 }
 
-void test_trellis(Trellis* trellis)
+/* MATLAB comparison:
+ * >> trel = poly2trellis(3,[7 5]);    % Define trellis
+ * >> msg = [1 1 0 0 1 0 0 1 0 0 1 0 1 0 1 1];
+ * >> code = convenc(msg, trel)        % Corresponds to outBits[] below
+ *      [1 1 0 1 0 1 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 0 0 0 1 0 0 0 0 1]
+ * >> tblen = 1;                       % Must be as small as possible for the optimal decoding
+ * >> deco = vitdec(code, trel, 1, 'trunc', 'hard')
+ * >>   [1 1 0 0 1 0 0 1 0 0 1 0 1 0 1 1]     % same as expected[] below
+ */
+void test_small_sample(Trellis* trellis)
 {
-  BranchPairs pairs = trellis->branchPairs();
+  DataType outBits[] = { 0b11, 0b01, 0b01, 0b11, 0b11, 0b10, 0b11, 0b11,
+                         0b10, 0b11, 0b11, 0b10, 0b00, 0b10, 0b00, 0b01 };
 
-  assert(pairs.size() == 4);
-  vector<Branch> pair;
+  Stage* nextStage = init_stage(outBits[0]);
+  const int numStages = sizeof(outBits)/sizeof(outBits[0]);
+
+  // Should start from i=1 because the stage i=0 is already done by init_stage() ??
+  for (int i = 0; i < numStages; i++)
+  {
+    Stage* stage = nextStage;
+    nextStage = updateSurvivors(stage, outBits[i], trellis->branchPairs());
+  }
+
+  vector<Bit> decoded = tracebackDecode(nextStage);
+  Bit expected[] = {1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1};
+
+  for (size_type i = 0; i < decoded.size(); i++)
+  {
+    assert(expected[i] == decoded[i]);
+  }
+
+  delete_stage(nextStage);
 
 }

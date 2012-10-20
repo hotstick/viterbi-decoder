@@ -8,6 +8,7 @@
  */
 
 #include "vitdec.hh"
+#include <algorithm>
 using namespace std;
 
 Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branchPairs)
@@ -44,4 +45,32 @@ Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branch
 
   Stage* nextStage = new Stage(survivors, totalMetrics, stage);
   return nextStage;
+}
+
+vector<Bit> tracebackDecode(Stage* finalStage)
+{
+  vector<Bit> decoded;
+
+  // Find the state with minimum of all metrics
+  size_type where = finalStage->findMinLoc();         // location of minimum metric
+  Branch branch = finalStage->survivor(where);        // surviving branch with that minimum metric
+  decoded.push_back(branch.bit());                    // 0 or 1
+
+  while (finalStage->previousStage() != nullptr)
+  {
+    Stage* stage = finalStage->previousStage();
+    State from = branch.from();
+    branch = stage->survivor(from);
+    decoded.push_back(branch.bit());
+    finalStage = stage;
+  }
+
+  // TODO We need to discard log2(4) - 1 elements before reversing ??
+  decoded.pop_back();
+
+  // Reversed because we start from finalStage and go backwards, decoding right-to-left
+  // The sequence is read-out left-to-right, agrees with MATLAB output
+  reverse(decoded.begin(), decoded.end());
+
+  return decoded;
 }

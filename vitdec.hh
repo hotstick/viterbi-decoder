@@ -47,6 +47,7 @@ public:
   Metric metric() { return mMetric; }
   State to() { return mTo; }
   State from() { return mFrom; }
+  Bit bit() { return mBit; }
 private:
   State mFrom;      // left node of the branch
   State mTo;        // right node of the branch
@@ -67,9 +68,28 @@ public:
   , mPrevious(previousStage)
   { /* empty */  }
 
+  //... Methods ...
+  size_type findMinLoc()
+  {
+    size_type minloc = 0;
+    Metric minMetric = mTotalMetrics[minloc];
+
+    for (size_type i = 0; i < mTotalMetrics.size(); ++i)
+    {
+      if (mTotalMetrics[i] < minMetric)
+      {
+        minMetric = mTotalMetrics[i];
+        minloc = i;
+      }
+    }
+
+    return minloc;
+  }
+
   //... Getters and Setters ...
   Stage* previousStage()  {  return mPrevious; }
-  Metric totalMetric(size_type i) { return mTotalMetrics[i]; }
+  Metric totalMetric(size_type i)  { return mTotalMetrics[i]; }
+  Branch survivor(size_type i)  { return mSurvivors[i]; }
 
   //... Destructor ...
   virtual ~Stage() {};
@@ -156,5 +176,6 @@ private:
 
 //... Global functions ...
 Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branchPairs);
+std::vector<Bit> tracebackDecode(Stage* finalStage);
 
 #endif /* VITDEC_HH_ */
