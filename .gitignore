@@ -1,0 +1,9 @@
+Debug/
+Release/
+*.a
+*.so
+*.out
+*.bin
+*.la
+*.exe
+
