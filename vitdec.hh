@@ -43,8 +43,6 @@ public:
 
   Branch() { /* empty */ };
 
-  //... Friend functions ...
-  friend bool operator==(Branch &b1, Branch &b2);
   //... Getters and Setters ...
   Metric metric() { return mMetric; }
   State to() { return mTo; }
@@ -68,17 +66,6 @@ public:
   , mTotalMetrics(totalMetrics)
   , mPrevious(previousStage)
   { /* empty */  }
-
-  //... Methods ...
-  void computeTotalMetrics(DataType outBits)
-  {
-    for (size_type i = 0; i < mSurvivors.size(); ++i)
-    {
-      Metric branchMetric = mSurvivors[i].metric();
-      Metric distance = distanceBetween(branchMetric, outBits);
-      mTotalMetrics[i] += distance;
-    }
-  }
 
   //... Getters and Setters ...
   Stage* previousStage()  {  return mPrevious; }
@@ -168,7 +155,6 @@ private:
 };
 
 //... Global functions ...
-void updateSurvivors(Stage& stage, DataType outBits, const BranchPairs& branchPairs);
-bool operator==(Branch &b1, Branch &b2);
+Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branchPairs);
 
 #endif /* VITDEC_HH_ */

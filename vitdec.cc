@@ -10,7 +10,7 @@
 #include "vitdec.hh"
 using namespace std;
 
-void updateSurvivors(Stage& stage, DataType outBits, const BranchPairs& branchPairs)
+Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branchPairs)
 {
   vector<Branch> survivors;
   vector<Metric> totalMetrics;
@@ -27,8 +27,8 @@ void updateSurvivors(Stage& stage, DataType outBits, const BranchPairs& branchPa
     assert(b0.to() == b1.to() && b0.to() == i);
 
     // Step ADD:
-    Metric distance0 = stage.totalMetric(b0.from()) + distanceBetween(b0.metric(), outBits);
-    Metric distance1 = stage.totalMetric(b1.from()) + distanceBetween(b1.metric(), outBits);
+    Metric distance0 = stage->totalMetric(b0.from()) + distanceBetween(b0.metric(), outBits);
+    Metric distance1 = stage->totalMetric(b1.from()) + distanceBetween(b1.metric(), outBits);
 
     // Step COMPARE and SELECT:
     // TODO toss a coin if distance0 == distance1
@@ -39,17 +39,9 @@ void updateSurvivors(Stage& stage, DataType outBits, const BranchPairs& branchPa
     else {
       survivors.push_back(b1);
       totalMetrics.push_back(distance1);
-    }
+    } //~ end if
+  } //~ end for
 
-  }
+  Stage* nextStage = new Stage(survivors, totalMetrics, stage);
+  return nextStage;
 }
-
-bool operator==(Branch &b1, Branch &b2)
-{
-  return (b1.mFrom == b2.mFrom &&
-          b1.mTo == b2.mTo &&
-          b1.mMetric == b2.mMetric &&
-          b1.mBit == b2.mBit
-         );
-}
-

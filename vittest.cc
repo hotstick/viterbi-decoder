@@ -20,14 +20,21 @@ void test_trellis(Trellis* trellis);
 int main()
 {
   DataType outBits[] = {0b01, 0b01};
-  Stage* stage = init_stage(outBits[0]);
+  Stage* nextStage = init_stage(outBits[0]);
   Trellis* trellis = getTrellis();
   trellis->build();
 
   test_trellis(trellis);
-  updateSurvivors(*stage, outBits[1], trellis->branchPairs());
 
-  delete_stage(stage);
+  const int tracebackLen = 7;
+
+  for (int i = 0; i < tracebackLen; i++)
+  {
+    Stage* stage = nextStage;
+    nextStage = updateSurvivors(stage, outBits[i], trellis->branchPairs());
+  }
+
+  delete_stage(nextStage);
   delete trellis;
 
   return 0;
