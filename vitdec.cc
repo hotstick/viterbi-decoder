@@ -10,10 +10,142 @@
 
 #include "vitdec.hh"
 #include <algorithm>
+#include <cassert>   // for assert()
+#include <utility>   // for make_pair()
 using namespace std;
 
+//... Forward Declarations ...
+class Branch;
+
+//... Typedefs ...
+
+//... Inline functions ...
+inline Metric distanceBetween(const Metric a, const Metric b) { return (a ^ b); }
+
+//... Static methods ...
+static Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branchPairs);
+static void tracebackDecode(Stage* finalStage, vector<Bit>& decoded);
+static Stage* computeFirstStage(DataType outBits, const BranchPairs& branchPairs);
 static void delete_stage(Stage* stage);
 
+//... Internal classes ...
+
+//... Class Stage ...
+class Stage
+{
+public:
+  //... Constructors ...
+  Stage(const std::vector<Branch>& survivors,
+        const std::vector<Metric>& totalMetrics,
+        Stage* previousStage
+  )
+  : mSurvivors(survivors)
+  , mTotalMetrics(totalMetrics)
+  , mPrevious(previousStage)
+  { /* empty */  }
+
+
+  //... Getters and Setters ...
+  Stage* previousStage()  {  return mPrevious; }
+  void previousStage(Stage* previous)  { mPrevious = previous; }
+  Metric totalMetric(size_type i)  { return mTotalMetrics[i]; }
+  Branch& survivor(size_type i)  { return mSurvivors[i]; }
+
+  //... Methods ...
+  size_type findMinLoc();
+
+  //... Destructor ...
+  virtual ~Stage() {};
+
+private:
+  Stage();
+  explicit Stage(const Stage& that);
+  Stage& operator=(const Stage& that);
+  // mSurvivors[i] is the incoming, surviving branch at node i
+  std::vector<Branch> mSurvivors;
+  std::vector<Metric> mTotalMetrics;
+  Stage* mPrevious;
+};
+
+
+//... Class Methods ...
+
+//... Class Stage ...
+size_type Stage::findMinLoc()
+{
+  size_type minloc = 0;
+  Metric minMetric = mTotalMetrics[minloc];
+
+  for (size_type i = 0; i < mTotalMetrics.size(); ++i)
+  {
+    if (mTotalMetrics[i] < minMetric)
+    {
+      minMetric = mTotalMetrics[i];
+      minloc = i;
+    }
+  }
+
+  return minloc;
+}
+
+//... Class Trellis ...
+void Trellis::push_back(State state0, State state1, Metric metric0, Metric metric1)
+{
+  mNextStates.push_back(std::make_pair(state0, state1));
+  mOutputs.push_back(std::make_pair(metric0, metric1));
+
+  assert(mNextStates.size() == mOutputs.size());
+}
+
+/**
+ *  mBranchPairs[i] contains the two Branches entering the state i
+ */
+void Trellis::build()
+{
+  size_type sz = mNextStates.size();
+
+  // First build an empty matrix
+  mBranchPairs.reserve(sz);
+  for (size_type i = 0; i < sz; i++)
+  {
+    std::vector<Branch> temp;
+    mBranchPairs.push_back(temp);
+  }
+
+  size_type sz1 = mNextStates.size();
+  size_type sz2 = mBranchPairs.size();
+  assert(sz1 == sz2);
+
+  for (size_type i = 0; i < sz; i++)
+  {
+    NextState nextState = mNextStates[i];
+    Output output = mOutputs[i];
+
+    State from = (State)i;
+    State to[] = { nextState.first, nextState.second };
+    Bit bit[] = { 0, 1 };
+    Metric metric[] = { output.first, output.second };
+
+    Branch b0(from, to[0], bit[0], metric[0]);
+    Branch b1(from, to[1], bit[1], metric[1]);
+
+    mBranchPairs[to[0]].push_back(b0);
+    mBranchPairs[to[1]].push_back(b1);
+
+    assert(mBranchPairs[to[0]].size() <= 2);
+    assert(mBranchPairs[to[1]].size() <= 2);
+  }
+
+  for (size_type i = 0; i < mNextStates.size(); i++)
+  {
+    // There must be exactly 2 branches entering per node.
+    assert(mBranchPairs[i].size() == 2);
+  }
+}
+
+
+
+//... Static functions ...
 Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branchPairs)
 {
   vector<Branch> survivors;
@@ -50,10 +182,8 @@ Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branch
   return nextStage;
 }
 
-vector<Bit> tracebackDecode(Stage* finalStage)
+void tracebackDecode(Stage* finalStage, vector<Bit>& decoded)
 {
-  vector<Bit> decoded;
-
   // Find the state with minimum of all metrics
   size_type where = finalStage->findMinLoc();         // location of minimum metric
   Branch branch = finalStage->survivor(where);        // surviving branch with that minimum metric
@@ -74,8 +204,6 @@ vector<Bit> tracebackDecode(Stage* finalStage)
   // Reversed because we start from finalStage and go backwards, decoding right-to-left
   // The sequence is read-out left-to-right, agrees with MATLAB output
   reverse(decoded.begin(), decoded.end());
-
-  return decoded;
 }
 
 Stage* computeFirstStage(DataType outBits, const BranchPairs& branchPairs)
@@ -105,7 +233,7 @@ Stage* computeFirstStage(DataType outBits, const BranchPairs& branchPairs)
   return nextStage;
 }
 
-vector<Bit> viterbiDecode(DataType outBits[], Trellis* trellis, size_type numStages)
+void viterbiDecode(DataType outBits[], Trellis* trellis, size_type numStages, vector<Bit>& decoded)
 {
   const BranchPairs& branchPairs = trellis->branchPairs();
   Stage* nextStage = computeFirstStage(outBits[0], branchPairs);
@@ -117,10 +245,8 @@ vector<Bit> viterbiDecode(DataType outBits[], Trellis* trellis, size_type numSta
     nextStage = updateSurvivors(stage, outBits[i], branchPairs);
   }
 
-  vector<Bit> decoded = tracebackDecode(nextStage);
+  tracebackDecode(nextStage, decoded);
   delete_stage(nextStage);
-
-  return decoded;
 }
 
 void delete_stage(Stage* stage)

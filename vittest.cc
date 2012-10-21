@@ -14,15 +14,15 @@
 using namespace std;
 
 Trellis* getTrellis();
-void test_trellis(Trellis* trellis);
-void test_small_sample(Trellis* trellis);
+void tesTrellis(Trellis* trellis);
+void testSmallSample(Trellis* trellis);
 
 int main()
 {
   Trellis* trellis = getTrellis();
   trellis->build();
 
-  test_small_sample(trellis);
+  testSmallSample(trellis);
 
   delete trellis;
 
@@ -47,21 +47,22 @@ Trellis* getTrellis()
 }
 
 /* MATLAB comparison:
- * >> trel = poly2trellis(3,[7 5]);    % Define trellis
- * >> msg = [1 1 0 0 1 0 0 1 0 0 1 0 1 0 1 1];
- * >> code = convenc(msg, trel)        % Corresponds to outBits[] below
- *      [1 1 0 1 0 1 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 0 0 0 1 0 0 0 0 1]
- * >> tblen = 1;                       % Must be as small as possible for the optimal decoding
- * >> deco = vitdec(code, trel, 1, 'trunc', 'hard')
- * >>   [1 1 0 0 1 0 0 1 0 0 1 0 1 0 1 1]     % same as expected[] below
+ * trel = poly2trellis(3,[7 5]);    % Define trellis
+ * msg = [1 1 0 0 1 0 0 1 0 0 1 0 1 0 1 1];
+ * code = convenc(msg, trel)        % Corresponds to outBits[] below
+ *   [1 1 0 1 0 1 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 0 0 0 1 0 0 0 0 1]
+ * tblen = 1;                       % Must be as small as possible for the optimal decoding
+ * deco = vitdec(code, trel, 1, 'trunc', 'hard')
+ *   [1 1 0 0 1 0 0 1 0 0 1 0 1 0 1 1]     % same as expected[] below
  */
-void test_small_sample(Trellis* trellis)
+void testSmallSample(Trellis* trellis)
 {
   DataType outBits[] = { 0b11, 0b01, 0b01, 0b11, 0b11, 0b10, 0b11, 0b11,
                          0b10, 0b11, 0b11, 0b10, 0b00, 0b10, 0b00, 0b01 };
   const int numStages = sizeof(outBits)/sizeof(outBits[0]);
 
-  vector<Bit> decoded = viterbiDecode(outBits, trellis, numStages);
+  vector<Bit> decoded;
+  viterbiDecode(outBits, trellis, numStages, decoded);
   Bit expected[] = {1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1};
 
   for (size_type i = 0; i < decoded.size(); i++)
