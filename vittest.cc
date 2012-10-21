@@ -13,8 +13,6 @@
 #include <iostream>
 using namespace std;
 
-Stage* init_stage(unsigned outBits);
-void delete_stage(Stage* stage);
 Trellis* getTrellis();
 void test_trellis(Trellis* trellis);
 void test_small_sample(Trellis* trellis);
@@ -25,44 +23,10 @@ int main()
   trellis->build();
 
   test_small_sample(trellis);
+
   delete trellis;
 
   return 0;
-}
-
-Stage* init_stage(unsigned outBits)
-{
-  vector<Branch> survivors;
-  Metric branchMetrics[] = {0b00, 0b11, 0b10, 0b01};
-
-  survivors.push_back(Branch(0, 0, 0, branchMetrics[0]));
-  survivors.push_back(Branch(0, 2, 1, branchMetrics[1]));
-  survivors.push_back(Branch(2, 1, 0, branchMetrics[2]));
-  survivors.push_back(Branch(2, 3, 1, branchMetrics[3]));
-
-  vector<Metric> totalMetrics;
-
-  totalMetrics.push_back(outBits ^ branchMetrics[0]);
-  totalMetrics.push_back(outBits ^ branchMetrics[1]);
-  totalMetrics.push_back(outBits ^ branchMetrics[2]);
-  totalMetrics.push_back(outBits ^ branchMetrics[3]);
-
-  Stage* previousStage = nullptr;
-  Stage* stage = new Stage(survivors, totalMetrics, previousStage);
-  assert(stage->previousStage() == nullptr);
-
-  return stage;
-}
-
-void delete_stage(Stage* stage)
-{
-  while (stage->previousStage() != nullptr)
-  {
-    Stage* temp = stage->previousStage();
-    delete stage;
-    stage = temp;
-  }
-  delete stage;
 }
 
 /*
@@ -95,25 +59,22 @@ void test_small_sample(Trellis* trellis)
 {
   DataType outBits[] = { 0b11, 0b01, 0b01, 0b11, 0b11, 0b10, 0b11, 0b11,
                          0b10, 0b11, 0b11, 0b10, 0b00, 0b10, 0b00, 0b01 };
-
-  Stage* nextStage = init_stage(outBits[0]);
   const int numStages = sizeof(outBits)/sizeof(outBits[0]);
 
-  // Should start from i=1 because the stage i=0 is already done by init_stage() ??
-  for (int i = 0; i < numStages; i++)
-  {
-    Stage* stage = nextStage;
-    nextStage = updateSurvivors(stage, outBits[i], trellis->branchPairs());
-  }
-
-  vector<Bit> decoded = tracebackDecode(nextStage);
+  vector<Bit> decoded = viterbiDecode(outBits, trellis, numStages);
   Bit expected[] = {1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1};
 
   for (size_type i = 0; i < decoded.size(); i++)
-  {
-    assert(expected[i] == decoded[i]);
-  }
+    cout << expected[i] << ' ';
 
-  delete_stage(nextStage);
+  cout << endl;
+
+  for (size_type i = 0; i < decoded.size(); i++)
+    cout << decoded[i] << ' ';
+
+  cout.flush();
+
+  for (size_type i = 0; i < decoded.size(); i++)
+    assert(expected[i] == decoded[i]);
 
 }

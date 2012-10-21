@@ -12,6 +12,8 @@
 #include <algorithm>
 using namespace std;
 
+static void delete_stage(Stage* stage);
+
 Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branchPairs)
 {
   vector<Branch> survivors;
@@ -67,7 +69,7 @@ vector<Bit> tracebackDecode(Stage* finalStage)
   }
 
   // TODO We need to discard log2(4) - 1 elements before reversing ??
-  decoded.pop_back();
+  // decoded.pop_back();
 
   // Reversed because we start from finalStage and go backwards, decoding right-to-left
   // The sequence is read-out left-to-right, agrees with MATLAB output
@@ -75,3 +77,60 @@ vector<Bit> tracebackDecode(Stage* finalStage)
 
   return decoded;
 }
+
+Stage* computeFirstStage(DataType outBits, const BranchPairs& branchPairs)
+{
+  vector<Branch> survivors;     // Empty
+
+  vector<Metric> totalMetrics;
+  for (size_type i = 0; i < branchPairs.size(); ++i)
+  {
+    totalMetrics.push_back(0);   // Initial metric is all-zeros
+  }
+
+  Stage* previousStage = nullptr;
+  Stage* stage = new Stage(survivors, totalMetrics, previousStage);
+  assert(stage->previousStage() == nullptr);
+
+  // Compute one ACS step (first stage)
+  // this method doesn't access stage->survivors(...) so we are OK
+  Stage* nextStage = updateSurvivors(stage, outBits, branchPairs);
+  assert(nextStage->previousStage() == stage);
+
+  // Survivors and totalMetrics are updated in nextStage.
+  // stage must be deleted because stage->survivors(...) are empty
+  delete_stage(stage);
+  nextStage->previousStage(nullptr);
+
+  return nextStage;
+}
+
+vector<Bit> viterbiDecode(DataType outBits[], Trellis* trellis, size_type numStages)
+{
+  const BranchPairs& branchPairs = trellis->branchPairs();
+  Stage* nextStage = computeFirstStage(outBits[0], branchPairs);
+
+  // Start from i=1 because the stage i=0 is done above
+  for (size_type i = 1; i < numStages; i++)
+  {
+    Stage* stage = nextStage;
+    nextStage = updateSurvivors(stage, outBits[i], branchPairs);
+  }
+
+  vector<Bit> decoded = tracebackDecode(nextStage);
+  delete_stage(nextStage);
+
+  return decoded;
+}
+
+void delete_stage(Stage* stage)
+{
+  while (stage->previousStage() != nullptr)
+  {
+    Stage* temp = stage->previousStage();
+    delete stage;
+    stage = temp;
+  }
+  delete stage;
+}
+

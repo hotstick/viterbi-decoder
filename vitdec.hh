@@ -89,6 +89,7 @@ public:
 
   //... Getters and Setters ...
   Stage* previousStage()  {  return mPrevious; }
+  void previousStage(Stage* previous)  { mPrevious = previous; }
   Metric totalMetric(size_type i)  { return mTotalMetrics[i]; }
   Branch survivor(size_type i)  { return mSurvivors[i]; }
 
@@ -176,7 +177,6 @@ private:
 };
 
 //... Global functions ...
-Stage* updateSurvivors(Stage* stage, DataType outBits, const BranchPairs& branchPairs);
-std::vector<Bit> tracebackDecode(Stage* finalStage);
+std::vector<Bit> viterbiDecode(DataType outBits[], Trellis* trellis, size_type numStages);
 
 #endif /* VITDEC_HH_ */
